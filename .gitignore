@@ -1,3 +1,7 @@
+# Data files
+demos_installed.txt
+demos_installed-backup.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
