@@ -11,7 +11,8 @@ import requests
 #steam = Steam()
 
 # TODO:
-# Handle specific response status codes!
+# - Handle specific response status codes!
+# - Handle multi-select for 'Refresh' button
 
 #================================================================================
 
@@ -21,6 +22,7 @@ class State(Enum):
   Installed = 1
   Tried = 2
   Failed = 3
+  Unfetched = 4
 
 class Column(Enum):
   def __str__(self): return str(self.name)
@@ -35,25 +37,31 @@ wishlist_appids = []
 data, data_sorted, data_sorted_filtered = {}, [], []
 
 layout = [
-  [sg.Text('Steam profile ID:'), sg.Input('', key='SteamProfileId', size=(20,1)), sg.Text('Country code:'), sg.Input('', key='SteamCountryCode', size=(3,1))],
-  [sg.Text('Request:'), sg.Button('Wishlist'), sg.Button('App-details', disabled=True),
-    sg.ProgressBar(key='Progress', orientation='h', s=(10,20), expand_x=True, relief=sg.RELIEF_SUNKEN, max_value=100, visible=False),
-    sg.Button('Stop', visible=False),],
+  [sg.Text('Steam profile ID:'), sg.Input('', key='SteamProfileId', size=(20,1)),
+   sg.Text('Country code:'), sg.Input('', key='SteamCountryCode', size=(3,1))],
+  [sg.Text('Request:'), sg.Button('Wishlist'), sg.Button('App-details', disabled=True), sg.Button('Unfetched Apps', disabled=True),
+   sg.ProgressBar(key='Progress', orientation='h', s=(10,20), expand_x=True, relief=sg.RELIEF_SUNKEN, max_value=100, visible=False),
+   sg.Button('Stop', visible=False),],
   [sg.Text('Status:'), sg.Text('', key='ProgressText')],
   [sg.Text('Selection:'),
-    sg.Text('(None)', key='Selection', size=(40,1), relief=sg.RELIEF_SUNKEN),
-    sg.Button('Refresh', disabled=True),
-    sg.Button('Visit page', disabled=True),
-    sg.Button('Install/Play demo', disabled=True)],
+   sg.Text('(None)', key='Selection', size=(40,1), relief=sg.RELIEF_SUNKEN),
+   sg.Button('Refresh', disabled=True),
+   sg.Button('Visit page', disabled=True),
+   sg.Button('Install/Play demo', disabled=True)],
   [sg.Text('Modify the State of selected line(s):'),
-    sg.Button(State.Wished, disabled=True),
-    sg.Button(State.Installed, disabled=True),
-    sg.Button(State.Tried, disabled=True),
-    sg.Button(State.Failed, disabled=True)],
+   sg.Button(State.Wished, disabled=True),
+   sg.Button(State.Installed, disabled=True),
+   sg.Button(State.Tried, disabled=True),
+   sg.Button(State.Failed, disabled=True),
+   sg.Button(State.Unfetched, visible=False)],
   [sg.Text('Filters:'),
-    sg.Text('State ='), sg.Combo(key='FilterState', values=[NO_FILTER, State.Wished, State.Installed, State.Tried, State.Failed], default_value=NO_FILTER, readonly=True, enable_events=True),
-    sg.Text('Has a DemoID ='), sg.Combo(key='FilterDemo', values=[NO_FILTER, 'Yes', 'No'], default_value=NO_FILTER, readonly=True, enable_events=True),
-    sg.Button('Reset')],
+   sg.Text('State ='), sg.Combo(key='FilterState',
+                                values=[NO_FILTER, State.Wished, State.Installed, State.Tried, State.Failed, State.Unfetched],
+                                default_value=NO_FILTER, readonly=True, enable_events=True),
+   sg.Text('Has a DemoID ='), sg.Combo(key='FilterDemo',
+                                       values=[NO_FILTER, 'Yes', 'No'],
+                                       default_value=NO_FILTER, readonly=True, enable_events=True),
+   sg.Button('Reset')],
   [sg.Text('', key='TableTitle')],
   [sg.Table(key='Table',
             values=data_sorted_filtered,
@@ -118,6 +126,8 @@ def update_table():
         colored_rows += [(i, 'black', 'yellow')]
       elif state == State.Failed:
         colored_rows += [(i, 'white', 'gray')]
+      elif state == State.Unfetched:
+        colored_rows += [(i, 'black', 'gray')]
       else:
         colored_rows += [(i, 'black', 'white')]
 
@@ -150,6 +160,7 @@ def load_data():
     elif prefix == 'I': state = State.Installed
     elif prefix == 'T': state = State.Tried
     elif prefix == 'F': state = State.Failed
+    elif prefix == 'U': state = State.Unfetched
     if state:
       app_id = int(app_id_str)
       demo_id = int(demo_id_str) if demo_id_str != 'None' else None
@@ -178,6 +189,7 @@ def save_data():
       elif state == State.Installed: prefix = 'I'
       elif state == State.Tried: prefix = 'T'
       elif state == State.Failed: prefix = 'F'
+      elif state == State.Unfetched: prefix = 'U'
       if prefix:
         name = v[Column.Name.value]
         app_id = v[Column.AppID.value]
@@ -203,8 +215,9 @@ def get_wishlist(steam_profile_id):
   for app_id in wishlist_appids:
     row = data.get(app_id)
     if not row:
-      data[app_id] = [app_id, "<Name is not fetched yet>", State.Wished, None]
-
+      data[app_id] = [app_id, "<Name is not fetched yet>", State.Unfetched, None]
+    elif row[Column.State.value] == State.Unfetched:
+      row[Column.State.value] = State.Wished
   update_table()
 
   missing_apps = [app_id for app_id in data.keys() if not app_id in wishlist_appids]
@@ -218,11 +231,17 @@ def get_wishlist(steam_profile_id):
         if row:
           print(f"Removing app: '{row[Column.Name.value]}' ({app_id})")
         else:
-          print(f"Removing (unfetched) app: ({app_id})")
+          print(f"Removing (unknown) app: ({app_id})")
         data.pop(app_id)
       update_table()
 
   return True
+
+#--------------------------------------------------------------------------------
+
+def get_unfetched_appids():
+  global wishlist_appids, data
+  return [id for id in wishlist_appids if data.get(id) and data.get(id)[Column.State.value] == State.Unfetched]
 
 #--------------------------------------------------------------------------------
 
@@ -246,6 +265,7 @@ def request_wishlist():
       print(f"{e_type} '{e}'")
       window['ProgressText'].update(f"{e_type} '{e}'", text_color='red')
     window['App-details'].update(disabled=(not wishlist_appids))
+    window['Unfetched Apps'].update(disabled=(not get_unfetched_appids()))
 
 #================================================================================
 
@@ -325,8 +345,11 @@ while True:
   if event == 'Wishlist':
     request_wishlist()
 
-  if event == 'App-details':
-    fetch_appids = [id for id in wishlist_appids]
+  if event == 'App-details' or event == 'Unfetched Apps':
+    if event == 'Unfetched Apps':
+      fetch_appids = get_unfetched_appids()
+    else:
+      fetch_appids = [id for id in wishlist_appids]
     window['Progress'].update(visible=True)
     window['Stop'].update(visible=True)
     country_code = values['SteamCountryCode']
@@ -370,6 +393,7 @@ while True:
       window['ProgressText'].update(f"App-detail requests completed! (Time elapsed: {m}m {s}s, avg {avg_secs} secs)", text_color='white')
       window['Progress'].update(visible=False)
       window['Stop'].update(visible=False)
+      window['Unfetched Apps'].update(disabled=(not get_unfetched_appids()))
       update_table()
       if len(fetch_appids) == 1:
         selected_rows = [i for i, v in enumerate(data_sorted_filtered) if v[Column.AppID.value] == fetch_appids[0]]
