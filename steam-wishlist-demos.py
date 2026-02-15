@@ -214,6 +214,11 @@ def get_wishlist(steam_profile_id):
       title="Remove items?")
     if reply == "Yes":
       for app_id in missing_apps:
+        row = data.get(app_id)
+        if row:
+          print(f"Removing app: '{row[Column.Name.value]}' ({app_id})")
+        else:
+          print(f"Removing (unfetched) app: ({app_id})")
         data.pop(app_id)
       update_table()
 
