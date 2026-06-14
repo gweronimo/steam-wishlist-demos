@@ -40,7 +40,7 @@ data, data_sorted, data_sorted_filtered = {}, [], []
 layout = [
   [sg.Text('Steam profile ID:'), sg.Input('', key='SteamProfileId', size=(20,1)),
    sg.Text('Country code:'), sg.Input('', key='SteamCountryCode', size=(3,1))],
-  [sg.Text('Request:'), sg.Button('Wishlist'), sg.Button('App-details', disabled=True), sg.Button('Unfetched Apps', disabled=True),
+  [sg.Button('Get wishlist'), sg.Text('App-details:'), sg.Button('Fetch all', disabled=True), sg.Button('Only unfetched', disabled=True),
    sg.ProgressBar(key='Progress', orientation='h', s=(10,20), expand_x=True, relief=sg.RELIEF_SUNKEN, max_value=100, visible=False),
    sg.Button('Stop', visible=False),],
   [sg.Text('Status:'), sg.Text('', key='ProgressText')],
@@ -278,8 +278,8 @@ def request_wishlist():
       e_type = type(e).__name__
       print(f"{e_type} '{e}'")
       window['ProgressText'].update(f"{e_type} '{e}'", text_color='red')
-    window['App-details'].update(disabled=(not wishlist_appids))
-    window['Unfetched Apps'].update(disabled=(not get_unfetched_appids()))
+    window['Fetch all'].update(disabled=(not wishlist_appids))
+    window['Only unfetched'].update(disabled=(not get_unfetched_appids()))
 
 #================================================================================
 
@@ -372,11 +372,11 @@ while True:
     window.timer_stop_all()
     break
 
-  if event == 'Wishlist':
+  if event == 'Get wishlist':
     request_wishlist()
 
-  if event == 'App-details' or event == 'Unfetched Apps':
-    if event == 'Unfetched Apps':
+  if event == 'Fetch all' or event == 'Only unfetched':
+    if event == 'Only unfetched':
       fetch_appids = get_unfetched_appids()
     else:
       fetch_appids = [id for id in wishlist_appids]
@@ -424,7 +424,7 @@ while True:
       window['ProgressText'].update(f"App-detail requests completed! ({len(fetch_appids)} IDs, Time elapsed: {m}m {s}s, avg {avg_secs} secs)", text_color='white')
       window['Progress'].update(visible=False)
       window['Stop'].update(visible=False)
-      window['Unfetched Apps'].update(disabled=(not get_unfetched_appids()))
+      window['Only unfetched'].update(disabled=(not get_unfetched_appids()))
       update_table()
       if len(fetch_appids) == 1:
         selected_rows = [i for i, v in enumerate(data_sorted_filtered) if v[Column.AppID.value] == fetch_appids[0]]
