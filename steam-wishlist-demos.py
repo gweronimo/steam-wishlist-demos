@@ -23,6 +23,7 @@ class State(Enum):
   Tried = 2
   Failed = 3
   Unfetched = 4
+  Missing = 5
 
 class Column(Enum):
   def __str__(self): return str(self.name)
@@ -53,14 +54,17 @@ layout = [
    sg.Button(State.Installed, disabled=True),
    sg.Button(State.Tried, disabled=True),
    sg.Button(State.Failed, disabled=True),
-   sg.Button(State.Unfetched, visible=False)],
+   sg.Button(State.Unfetched, visible=False),
+   sg.Button(State.Missing, visible=False)],
   [sg.Text('Filters:'),
-   sg.Text('State ='), sg.Combo(key='FilterState',
-                                values=[NO_FILTER, State.Wished, State.Installed, State.Tried, State.Failed, State.Unfetched],
-                                default_value=NO_FILTER, readonly=True, enable_events=True),
-   sg.Text('Has a DemoID ='), sg.Combo(key='FilterDemo',
-                                       values=[NO_FILTER, 'Yes', 'No'],
-                                       default_value=NO_FILTER, readonly=True, enable_events=True),
+   sg.Text('State ='), sg.Combo(
+     key='FilterState',
+     values=[NO_FILTER, State.Wished, State.Installed, State.Tried, State.Failed, State.Unfetched, State.Missing],
+     default_value=NO_FILTER, readonly=True, enable_events=True),
+   sg.Text('Has a DemoID ='), sg.Combo(
+     key='FilterDemo',
+     values=[NO_FILTER, 'Yes', 'No'],
+     default_value=NO_FILTER, readonly=True, enable_events=True),
    sg.Button('Reset')],
   [sg.Text('', key='TableTitle')],
   [sg.Table(key='Table',
@@ -111,12 +115,10 @@ def update_table():
 
   colored_rows = []
   for i, v in enumerate(data_sorted_filtered):
-      app_id = v[Column.AppID.value]
+      #app_id = v[Column.AppID.value]
       state = v[Column.State.value]
       demo_id = v[Column.DemoID.value]
-      if not app_id in wishlist_appids:
-        colored_rows += [(i, 'white', 'red')]
-      elif state == State.Wished and not demo_id:
+      if state == State.Wished and not demo_id:
         colored_rows += [(i, 'black', 'orange')]
       elif state == State.Wished:
         colored_rows += [(i, 'white', 'green')]
@@ -128,6 +130,8 @@ def update_table():
         colored_rows += [(i, 'white', 'gray')]
       elif state == State.Unfetched:
         colored_rows += [(i, 'black', 'gray')]
+      elif state == State.Missing:
+        colored_rows += [(i, 'white', 'red')]
       else:
         colored_rows += [(i, 'black', 'white')]
 
@@ -161,6 +165,7 @@ def load_data():
     elif prefix == 'T': state = State.Tried
     elif prefix == 'F': state = State.Failed
     elif prefix == 'U': state = State.Unfetched
+    elif prefix == 'M': state = State.Missing
     if state:
       app_id = int(app_id_str)
       demo_id = int(demo_id_str) if demo_id_str != 'None' else None
@@ -190,6 +195,7 @@ def save_data():
       elif state == State.Tried: prefix = 'T'
       elif state == State.Failed: prefix = 'F'
       elif state == State.Unfetched: prefix = 'U'
+      elif state == State.Missing: prefix = 'M'
       if prefix:
         name = v[Column.Name.value]
         app_id = v[Column.AppID.value]
@@ -212,18 +218,13 @@ def get_wishlist(steam_profile_id):
   wishlist_appids = [int(item['appid']) for item in response_items]
   print(f"Got {len(wishlist_appids)} apps for profile {steam_profile_id}")
 
-  for app_id in wishlist_appids:
-    row = data.get(app_id)
-    if not row:
-      data[app_id] = [app_id, "<Name is not fetched yet>", State.Unfetched, None]
-  update_table()
-
   missing_apps = [app_id for app_id in data.keys() if not app_id in wishlist_appids]
+
   if len(missing_apps) > 0:
     reply = sg.popup_yes_no(
       f"Found {len(missing_apps)} AppIDs no longer on the wishlist.\nShould they be removed?\n(If not, they will just be marked in red.)",
       title="Remove items?")
-    if reply == "Yes":
+    if reply == 'Yes':
       for app_id in missing_apps:
         row = data.get(app_id)
         if row:
@@ -231,7 +232,18 @@ def get_wishlist(steam_profile_id):
         else:
           print(f"Removing (unknown) app: ({app_id})")
         data.pop(app_id)
-      update_table()
+    else:
+      for app_id in missing_apps:
+        row = data.get(app_id)
+        if row:
+          row[Column.State.value] = State.Missing
+
+  for app_id in wishlist_appids:
+    row = data.get(app_id)
+    if not row:
+      data[app_id] = [app_id, "<Name is not fetched yet>", State.Unfetched, None]
+
+  update_table()
 
   return True
 
