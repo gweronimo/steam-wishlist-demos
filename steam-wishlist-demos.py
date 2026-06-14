@@ -326,19 +326,21 @@ def get_app_details(app_id, country_code):
       demo_ids = [demo.get('appid') for demo in demos if demo.get('appid')]
       if len(demo_ids) > 0:
         demo_id = demo_ids[0]
-      if len(demo_ids) > 1:
+      if len(set(demo_ids)) > 1: # More than one unique ID?
         print(f"Warning: multiple demo-ids for app '{name}': {demo_ids}")
 
     needs_update = False
     if row[Column.Name.value] != name:
+      old_name = row[Column.Name.value]
       row[Column.Name.value] = name
-      print(f"Updated app Name: '{name}'")
+      print(f"Updated app Name: '{old_name}' --> '{name}'")
       if row[Column.State.value] == State.Unfetched:
         row[Column.State.value] = State.Wished
       needs_update = True
     if row[Column.DemoID.value] != demo_id:
+      old_demo_id = row[Column.DemoID.value]
       row[Column.DemoID.value] = demo_id
-      print(f"Updated demo-ID for app: '{name}'")
+      print(f"Updated demo-ID for app: '{name}' ({old_demo_id} --> {demo_id})")
       needs_update = True
     if needs_update:
       update_table()
