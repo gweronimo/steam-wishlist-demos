@@ -15,6 +15,7 @@ import requests
 # - Handle multi-select for 'Refresh' button
 
 #================================================================================
+# Main data
 
 class State(Enum):
   def __str__(self): return str(self.name)
@@ -67,11 +68,13 @@ layout = [
      default_value=NO_FILTER, readonly=True, enable_events=True),
    sg.Button('Reset')],
   [sg.Text('', key='TableTitle')],
-  [sg.Table(key='Table',
-            values=data_sorted_filtered,
-            headings=[Column.AppID, Column.Name, Column.State, Column.DemoID],
-            col_widths=[10, 40, 10, 10],
-            num_rows=10, justification='left', def_col_width=10, auto_size_columns=False, expand_x=True, expand_y=True, change_submits=True)],
+  [sg.Table(
+    key='Table',
+    values=data_sorted_filtered,
+    headings=[Column.AppID, Column.Name, Column.State, Column.DemoID],
+    col_widths=[10, 40, 10, 10],
+    num_rows=10, justification='left', def_col_width=10, auto_size_columns=False,
+    expand_x=True, expand_y=True, change_submits=True)],
 ]
 
 #sg.theme('Dark Blue 3')
@@ -141,6 +144,8 @@ def update_table():
 
 data_file = 'demos_installed.txt'
 backup_file = 'demos_installed-backup.txt'
+
+#--------------------------------------------------------------------------------
 
 def load_data():
   global data
@@ -284,6 +289,8 @@ request_interval_secs = limit_secs / batch_size
 avg_request_secs = 1.75 # Empirical value, modify if needed!
 retry_delay_secs = 10
 
+#--------------------------------------------------------------------------------
+
 def get_app_details(app_id, country_code):
   global data
 
@@ -340,6 +347,7 @@ def get_app_details(app_id, country_code):
   return False
 
 #================================================================================
+# Main program
 
 load_data()
 
@@ -491,3 +499,6 @@ while True:
 save_data()
 
 window.close()
+
+# End of main program
+#================================================================================
