@@ -294,6 +294,11 @@ retry_delay_secs = 10
 def get_app_details(app_id, country_code):
   global data
 
+  row = data.get(app_id)
+  if not row:
+    print("Appid not found in wishlist data: {app_id}")
+    return True # Skip this app, as if successful
+
   #details = steam.apps.get_app_details(app_id=app_id, country="SE", filters="basic,demos")
   response = requests.get(
     f"https://store.steampowered.com/api/appdetails",
@@ -306,6 +311,13 @@ def get_app_details(app_id, country_code):
 
   if response.ok:
     #print(response.json())
+    success = response.json()[str(app_id)]['success'] # bool
+    if not success:
+      name = row[Column.Name.value]
+      print(f"App-details response OK, but appid failed: '{name}' ({app_id})")
+      row[Column.State.value] = State.Failed
+      return True # Skip this app, as if successful
+    
     details = response.json()[str(app_id)]['data']
     name = details.get('name')
     demos = details.get('demos')
@@ -319,21 +331,20 @@ def get_app_details(app_id, country_code):
         print(f"Warning: multiple demo-ids for app '{name}': {demo_ids}")
 
     needs_update = False
-    row = data.get(app_id)
-    if row:
-      if row[Column.Name.value] != name:
-        row[Column.Name.value] = name
-        print(f"Updated app Name: '{name}'")
-        if row[Column.State.value] == State.Unfetched:
-          row[Column.State.value] = State.Wished
-        needs_update = True
-      if row[Column.DemoID.value] != demo_id:
-        row[Column.DemoID.value] = demo_id
-        print(f"Updated demo-ID for app: '{name}'")
-        needs_update = True
+    if row[Column.Name.value] != name:
+      row[Column.Name.value] = name
+      print(f"Updated app Name: '{name}'")
+      if row[Column.State.value] == State.Unfetched:
+        row[Column.State.value] = State.Wished
+      needs_update = True
+    if row[Column.DemoID.value] != demo_id:
+      row[Column.DemoID.value] = demo_id
+      print(f"Updated demo-ID for app: '{name}'")
+      needs_update = True
     if needs_update:
       update_table()
-    return True
+
+    return True # Successful request
 
   # Failure:
   print(f"App-details request failed, response status code: {response.status_code}")
@@ -344,7 +355,7 @@ def get_app_details(app_id, country_code):
   #print(response.headers)
   #print(response.text)
   #print(response.content)
-  return False
+  return False # Failed request, retry request?!
 
 #================================================================================
 # Main program
@@ -403,14 +414,15 @@ while True:
       except Exception as e:
         e_type = type(e).__name__
         print(f"{e_type} '{e}'")
-        window['ProgressText'].update(f"{e_type} '{e}' - retrying in {retry_delay_secs} secs!", text_color='red')
-        window.timer_start(1000 * retry_delay_secs, repeating=False) # milliseconds
+        window['ProgressText'].update(f"{e_type} '{e}' - skipping after {request_interval_secs} secs!", text_color='red')
+        curr_app_idx += 1
+        window.timer_start(1000 * request_interval_secs, repeating=False) # milliseconds
     else:
-      print("App-details requests completed.")
+      print(f"App-details requests completed ({len(fetch_appids)} IDs).")
       elapsed_secs = time.time() - start_time
       m, s = int(elapsed_secs / 60), int(elapsed_secs) % 60
       avg_secs = "{:.2f}".format(elapsed_secs / len(fetch_appids))
-      window['ProgressText'].update(f"App-detail requests completed! (Time elapsed: {m}m {s}s, avg {avg_secs} secs)", text_color='white')
+      window['ProgressText'].update(f"App-detail requests completed! ({len(fetch_appids)} IDs, Time elapsed: {m}m {s}s, avg {avg_secs} secs)", text_color='white')
       window['Progress'].update(visible=False)
       window['Stop'].update(visible=False)
       window['Unfetched Apps'].update(disabled=(not get_unfetched_appids()))
