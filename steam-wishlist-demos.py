@@ -12,7 +12,6 @@ import requests
 
 # TODO:
 # - Handle specific response status codes!
-# - Handle multi-select for 'Refresh' button
 
 #================================================================================
 # Main data
@@ -469,7 +468,7 @@ while True:
       for state in State: window[state.name].update(disabled=False)
     else: # Multi-selection
       window['Selection'].update("(Multiple)")
-      window['Refresh'].update(disabled=True)
+      window['Refresh'].update(disabled=False)
       window['Visit page'].update(disabled=True)
       window['Install/Play demo'].update(disabled=True)
       for state in State: window[state.name].update(disabled=False)
@@ -490,16 +489,18 @@ while True:
       if values['FilterState'] == NO_FILTER and values['FilterDemo'] == NO_FILTER:
         window['Table'].update(select_rows=selected_rows)
   
-  if len(selected_rows) == 1:
-    idx = selected_rows[0]
+  if len(selected_rows) >= 1:
     if event == 'Refresh':
       app_id = data_sorted_filtered[idx][Column.AppID.value]
-      fetch_appids = [app_id]
+      fetch_appids = [data_sorted_filtered[idx][Column.AppID.value] for idx in selected_rows]
       country_code = values['SteamCountryCode']
-      print(f"Starting request for app-details on appid {app_id} (cc = '{country_code}')...")
+      print(f"Starting requests for app-details on '{event}' ({len(fetch_appids)} IDs, cc = '{country_code}')...")
       curr_app_idx = 0
       start_time = time.time()
       window.timer_start(0, repeating=False) # milliseconds
+
+  if len(selected_rows) == 1:
+    idx = selected_rows[0]
     if event == 'Visit page':
       app_id = data_sorted_filtered[idx][Column.AppID.value]
       webbrowser.open(f"https://store.steampowered.com/app/{app_id}/")
