@@ -216,8 +216,6 @@ def get_wishlist(steam_profile_id):
     row = data.get(app_id)
     if not row:
       data[app_id] = [app_id, "<Name is not fetched yet>", State.Unfetched, None]
-    elif row[Column.State.value] == State.Unfetched:
-      row[Column.State.value] = State.Wished
   update_table()
 
   missing_apps = [app_id for app_id in data.keys() if not app_id in wishlist_appids]
@@ -307,6 +305,8 @@ def get_app_details(app_id, country_code):
       if row[Column.Name.value] != name:
         row[Column.Name.value] = name
         print(f"Updated app Name: '{name}'")
+        if row[Column.State.value] == State.Unfetched:
+          row[Column.State.value] = State.Wished
         needs_update = True
       if row[Column.DemoID.value] != demo_id:
         row[Column.DemoID.value] = demo_id
