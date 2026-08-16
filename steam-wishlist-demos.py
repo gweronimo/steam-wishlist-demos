@@ -225,16 +225,24 @@ def get_wishlist(steam_profile_id):
   missing_apps = [app_id for app_id in data.keys() if not app_id in wishlist_appids]
 
   if len(missing_apps) > 0:
+    print(f"Missing apps:")
+    for app_id in missing_apps:
+        row = data.get(app_id)
+        if row:
+          print(f" - '{row[Column.Name.value]}' ({app_id})")
+        else:
+          print(f" - (unknown : {app_id})")
     reply = sg.popup_yes_no(
       f"Found {len(missing_apps)} AppIDs no longer on the wishlist.\nShould they be removed?\n(If not, they will just be marked in red.)",
       title="Remove items?")
     if reply == 'Yes':
+      print(f"Removing apps:")
       for app_id in missing_apps:
         row = data.get(app_id)
         if row:
-          print(f"Removing app: '{row[Column.Name.value]}' ({app_id})")
+          print(f" - '{row[Column.Name.value]}' ({app_id})")
         else:
-          print(f"Removing (unknown) app: ({app_id})")
+          print(f" - (unknown : {app_id})")
         data.pop(app_id)
     else:
       for app_id in missing_apps:
