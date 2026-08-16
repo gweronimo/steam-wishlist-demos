@@ -39,8 +39,10 @@ data, data_sorted, data_sorted_filtered = {}, [], []
 
 layout = [
   [sg.Text('Steam profile ID:'), sg.Input('', key='SteamProfileId', size=(20,1)),
-   sg.Text('Country code:'), sg.Input('', key='SteamCountryCode', size=(3,1))],
-  [sg.Button('Get wishlist'), sg.Text('App-details:'), sg.Button('Fetch all', disabled=True), sg.Button('Only unfetched', disabled=True),
+   sg.Text('Country code:'), sg.Input('', key='SteamCountryCode', size=(3,1)),
+   sg.Text('Visit SteamFilters:'), sg.Button('Wishlist', key='SF_Wish'), sg.Button('Library', key='SF_Lib')],
+  [sg.Button('Get wishlist'),
+   sg.Text('App-details:'), sg.Button('Fetch all', disabled=True), sg.Button('Only unfetched', disabled=True),
    sg.ProgressBar(key='Progress', orientation='h', s=(10,20), expand_x=True, relief=sg.RELIEF_SUNKEN, max_value=100, visible=False),
    sg.Button('Stop', visible=False),],
   [sg.Text('Status:'), sg.Text('', key='ProgressText')],
@@ -381,6 +383,15 @@ while True:
   if event == sg.WIN_CLOSED:
     window.timer_stop_all()
     break
+
+  if event == 'SF_Wish':
+    steam_profile_id = window['SteamProfileId'].get()
+    country_code = values['SteamCountryCode']
+    webbrowser.open(f"https://www.lorenzostanco.com/lab/steam/wishlist/u/{steam_profile_id}/_/{country_code.lower()}")
+
+  if event == 'SF_Lib':
+    steam_profile_id = window['SteamProfileId'].get()
+    webbrowser.open(f"https://www.lorenzostanco.com/lab/steam/u/{steam_profile_id}/")
 
   if event == 'Get wishlist':
     request_wishlist()
