@@ -67,6 +67,8 @@ layout = [
      key='FilterDemo',
      values=[NO_FILTER, 'Yes', 'No'],
      default_value=NO_FILTER, readonly=True, enable_events=True),
+   sg.Text('Title (fuzzy) ='), sg.Input(
+     key='FilterTitle', s=(17,1), enable_events=True),
    sg.Button('Reset')],
   [sg.Text('', key='TableTitle')],
   [sg.Table(
@@ -88,16 +90,27 @@ window.move_to_center()
 #================================================================================
 
 def check_filters(item):
+
   filterState = window['FilterState'].get()
   if filterState != NO_FILTER:
     if item[Column.State.value] != filterState:
       return False
+
   filterDemo = window['FilterDemo'].get()
   if filterDemo != NO_FILTER:
     if filterDemo == 'Yes' and not item[Column.DemoID.value]:
       return False
     if filterDemo == 'No' and item[Column.DemoID.value]:
       return False
+
+  filterTitle = window['FilterTitle'].get()
+  if filterTitle != "":
+    title = item[Column.Name.value].lower()
+    fuzzy = filterTitle.lower().split()
+    for s in fuzzy:
+      if not s in title:
+        return False
+
   return True
 
 #================================================================================
@@ -486,12 +499,13 @@ while True:
       window['Stop'].update(visible=False)
       update_table()
 
-  if event == 'FilterState' or event == 'FilterDemo':
+  if event == 'FilterState' or event == 'FilterDemo' or event == 'FilterTitle':
     update_table()
 
   if event == 'Reset':
     window['FilterState'].update(NO_FILTER)
     window['FilterDemo'].update(NO_FILTER)
+    window['FilterTitle'].update("")
     update_table()
 
   selected_rows = values['Table']
@@ -532,7 +546,7 @@ while True:
         break
     if needs_refresh:
       update_table()
-      if values['FilterState'] == NO_FILTER and values['FilterDemo'] == NO_FILTER:
+      if values['FilterState'] == NO_FILTER and values['FilterDemo'] == NO_FILTER and values['FilterTitle'] == "":
         window['Table'].update(select_rows=selected_rows)
   
   if len(selected_rows) >= 1:
