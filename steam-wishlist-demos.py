@@ -4,7 +4,7 @@ import os.path
 import shutil
 import webbrowser
 
-import FreeSimpleGUI as sg
+import PySimpleGUI as sg
 import requests
 
 #from steam_web_api import Steam
@@ -80,7 +80,9 @@ layout = [
     expand_x=True, expand_y=True, change_submits=True)],
 ]
 
-#sg.theme('Dark Blue 3')
+print(f"PySimpleGUI theme: '{sg.theme()}' (global: '{sg.theme_global()}')")
+#sg.theme('DarkBlue3')
+
 window = sg.Window('Demos in Steam wishlist', layout, resizable=True, finalize=True)
 window.set_min_size((640, 768))
 window.refresh()
