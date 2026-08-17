@@ -300,11 +300,11 @@ def request_wishlist():
     window['ProgressText'].update(f"Steam profile ID must consist of only digits!", text_color='red')
   else:
     print("Requesting wishlist...")
-    window['ProgressText'].update(f"Requesting wishlist...", text_color='white')
+    window['ProgressText'].update(f"Requesting wishlist...", text_color='blue')
     window.refresh()
     try:
       if get_wishlist(steam_profile_id):
-        window['ProgressText'].update(f"Wishlist request completed!", text_color='white')
+        window['ProgressText'].update(f"Wishlist request completed!", text_color='gray75')
       else:
         window['ProgressText'].update(f"Failed to request wishlist!", text_color='red')
     except Exception as e:
@@ -449,7 +449,7 @@ while True:
       fetch_appids = get_unfetched_appids()
     else:
       fetch_appids = [id for id in wishlist_appids]
-    window['Progress'].update(visible=True)
+    window['Progress'].update(visible=True, current_count=0)
     window['Stop'].update(visible=True)
     country_code = values['SteamCountryCode']
     print(f"Starting requests for app-details on '{event}' ({len(fetch_appids)} IDs, cc = '{country_code}')...")
@@ -464,7 +464,7 @@ while True:
       #print(f"Requesting app-details for appid: {app_id}")
       remain_secs = avg_request_secs * (len(fetch_appids) - curr_app_idx - 1)
       m, s = int(remain_secs / 60), int(remain_secs) % 60
-      window['ProgressText'].update(f"Requesting app-details for item {curr_app_idx+1}/{len(fetch_appids)}, time remaining: {m}m {s}s", text_color='white')
+      window['ProgressText'].update(f"Requesting app-details for item {curr_app_idx+1}/{len(fetch_appids)}, time remaining: {m}m {s}s", text_color='blue')
       window.refresh()
       try:
         if get_app_details(app_id, country_code):
@@ -490,7 +490,7 @@ while True:
       elapsed_secs = time.time() - start_time
       m, s = int(elapsed_secs / 60), int(elapsed_secs) % 60
       avg_secs = "{:.2f}".format(elapsed_secs / len(fetch_appids))
-      window['ProgressText'].update(f"App-detail requests completed! ({len(fetch_appids)} IDs, Time elapsed: {m}m {s}s, avg {avg_secs} secs)", text_color='white')
+      window['ProgressText'].update(f"App-detail requests completed! ({len(fetch_appids)} IDs, Time elapsed: {m}m {s}s, avg {avg_secs} secs)", text_color='gray75')
       window['Progress'].update(visible=False)
       window['Stop'].update(visible=False)
       window['Only unfetched'].update(disabled=(not get_unfetched_appids()))
@@ -504,7 +504,7 @@ while True:
       window.timer_stop_all()
       print("App-details requests stopped before completion!")
       # FIXME - display elapsed time?
-      window['ProgressText'].update(f"Demo requests were stopped!", text_color='white')
+      window['ProgressText'].update(f"Demo requests were stopped!", text_color='orange')
       window['Progress'].update(visible=False)
       window['Stop'].update(visible=False)
       update_table()
@@ -527,7 +527,7 @@ while True:
       window['Visit store'].update(disabled=True)
       window['Install/Play demo'].update(disabled=True)
       for state in State: window[state.name].update(disabled=True)
-    elif len(selected_rows) == 1:
+    elif len(selected_rows) == 1: # Single-selection
       idx = selected_rows[0]
       app_name = data_sorted_filtered[idx][Column.Name.value]
       window['Selection'].update(app_name)
@@ -559,17 +559,20 @@ while True:
       if values['FilterState'] == NO_FILTER and values['FilterDemo'] == NO_FILTER and values['FilterTitle'] == "":
         window['Table'].update(select_rows=selected_rows)
   
-  if len(selected_rows) >= 1:
+  if len(selected_rows) >= 1: # Single/multi-selection
     if event == 'Refresh':
       app_id = data_sorted_filtered[idx][Column.AppID.value]
       fetch_appids = [data_sorted_filtered[idx][Column.AppID.value] for idx in selected_rows]
+      if len(selected_rows) > 1: # Multi-selection
+        window['Progress'].update(visible=True, current_count=0)
+        window['Stop'].update(visible=True)
       country_code = values['SteamCountryCode']
       print(f"Starting requests for app-details on '{event}' ({len(fetch_appids)} IDs, cc = '{country_code}')...")
       curr_app_idx = 0
       start_time = time.time()
       window.timer_start(0, repeating=False) # milliseconds
 
-  if len(selected_rows) == 1:
+  if len(selected_rows) == 1: # Single-selection
     idx = selected_rows[0]
     if event == 'Visit store':
       web_visit_steam_store_page(idx)
