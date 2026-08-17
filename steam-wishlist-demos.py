@@ -369,6 +369,34 @@ def get_app_details(app_id, country_code):
   return False # Failed request, retry request?!
 
 #================================================================================
+
+def web_visit_steam_filters_wishlist():
+  steam_profile_id = window['SteamProfileId'].get()
+  if not steam_profile_id:
+    window['ProgressText'].update(f"Enter a Steam profile ID first!", text_color='red')
+  else:
+    country_code = window['SteamCountryCode'].get()
+    webbrowser.open(f"https://www.lorenzostanco.com/lab/steam/wishlist/u/{steam_profile_id}/_/{country_code.lower()}")
+
+def web_visit_steam_filters_library():
+  steam_profile_id = window['SteamProfileId'].get()
+  if not steam_profile_id:
+    window['ProgressText'].update(f"Enter a Steam profile ID first!", text_color='red')
+  else:
+    webbrowser.open(f"https://www.lorenzostanco.com/lab/steam/u/{steam_profile_id}/")
+
+def web_visit_steam_store_page(idx):
+  app_id = data_sorted_filtered[idx][Column.AppID.value]
+  webbrowser.open(f"https://store.steampowered.com/app/{app_id}/")
+
+def local_install_or_play_demo(idx):
+  global data_sorted_filtered
+
+  demo_id = data_sorted_filtered[idx][Column.DemoID.value]
+  if demo_id:
+    webbrowser.open(f"steam://rungameid/{demo_id}")
+
+#================================================================================
 # Main program
 
 load_data()
@@ -385,13 +413,10 @@ while True:
     break
 
   if event == 'SF_Wish':
-    steam_profile_id = window['SteamProfileId'].get()
-    country_code = values['SteamCountryCode']
-    webbrowser.open(f"https://www.lorenzostanco.com/lab/steam/wishlist/u/{steam_profile_id}/_/{country_code.lower()}")
+    web_visit_steam_filters_wishlist()
 
   if event == 'SF_Lib':
-    steam_profile_id = window['SteamProfileId'].get()
-    webbrowser.open(f"https://www.lorenzostanco.com/lab/steam/u/{steam_profile_id}/")
+    web_visit_steam_filters_library()
 
   if event == 'Get wishlist':
     request_wishlist()
@@ -523,12 +548,9 @@ while True:
   if len(selected_rows) == 1:
     idx = selected_rows[0]
     if event == 'Visit page':
-      app_id = data_sorted_filtered[idx][Column.AppID.value]
-      webbrowser.open(f"https://store.steampowered.com/app/{app_id}/")
+      web_visit_steam_store_page(idx)
     if event == 'Install/Play demo':
-      demo_id = data_sorted_filtered[idx][Column.DemoID.value]
-      if demo_id:
-        webbrowser.open(f"steam://rungameid/{demo_id}")
+      local_install_or_play_demo(idx)
 
 save_data()
 
