@@ -37,8 +37,12 @@ NO_FILTER = '(any)'
 wishlist_appids = []
 data, data_sorted, data_sorted_filtered = {}, [], []
 
+def TitledSeparator(title):
+  return [sg.HSeparator(pad=((10, 5), 10)), sg.Text(title, font=('_', 0, 'bold')), sg.HSeparator(pad=((5, 10), 10))]
+
 layout = [
-  [sg.Text('Steam profile ID:'), sg.Input('', key='SteamProfileId', size=(20,1)),
+  [TitledSeparator('Steam profile & data'),
+   sg.Text('Steam profile ID:'), sg.Input('', key='SteamProfileId', size=(20,1)),
    sg.Text('Country code:'), sg.Input('', key='SteamCountryCode', size=(3,1)),
    sg.Text('Visit SteamFilters:'), sg.Button('Wishlist', key='SF_Wish'), sg.Button('Library', key='SF_Lib')],
   [sg.Button('Get wishlist'),
@@ -46,19 +50,8 @@ layout = [
    sg.ProgressBar(key='Progress', orientation='h', s=(10,20), expand_x=True, relief=sg.RELIEF_SUNKEN, max_value=100, visible=False),
    sg.Button('Stop', visible=False),],
   [sg.Text('Status:'), sg.Text('', key='ProgressText')],
-  [sg.Text('Selection:'),
-   sg.Text('(None)', key='Selection', size=(40,1), relief=sg.RELIEF_SUNKEN),
-   sg.Button('Refresh', disabled=True),
-   sg.Button('Visit page', disabled=True),
-   sg.Button('Install/Play demo', disabled=True)],
-  [sg.Text('Modify the State of selected line(s):'),
-   sg.Button(State.Wished, disabled=True),
-   sg.Button(State.Installed, disabled=True),
-   sg.Button(State.Tried, disabled=True),
-   sg.Button(State.Failed, disabled=True),
-   sg.Button(State.Unfetched, visible=False),
-   sg.Button(State.Missing, visible=False)],
-  [sg.Text('Filters:'),
+
+  [TitledSeparator('Wishlist (with filters)'),
    sg.Text('State ='), sg.Combo(
      key='FilterState',
      values=[NO_FILTER, State.Wished, State.Installed, State.Tried, State.Failed, State.Unfetched, State.Missing],
@@ -68,8 +61,9 @@ layout = [
      values=[NO_FILTER, 'Yes', 'No'],
      default_value=NO_FILTER, readonly=True, enable_events=True),
    sg.Text('Title (fuzzy) ='), sg.Input(
-     key='FilterTitle', s=(17,1), enable_events=True),
-   sg.Button('Reset')],
+     key='FilterTitle', s=(20,1), enable_events=True),
+   sg.Button('Reset all')],
+
   [sg.Text('', key='TableTitle')],
   [sg.Table(
     key='Table',
@@ -78,13 +72,27 @@ layout = [
     col_widths=[10, 40, 10, 10],
     num_rows=10, justification='left', def_col_width=10, auto_size_columns=False,
     expand_x=True, expand_y=True, change_submits=True)],
+
+  [TitledSeparator('Selected item(s)'),
+   sg.Text('Selection:'),
+   sg.Text('(None)', key='Selection', size=(40,1), relief=sg.RELIEF_SUNKEN),
+   sg.Button('Refresh', disabled=True),
+   sg.Button('Visit store', disabled=True),
+   sg.Button('Install/Play demo', disabled=True)],
+  [sg.Text('Modify the State of selected line(s):'),
+   sg.Button(State.Wished, disabled=True),
+   sg.Button(State.Installed, disabled=True),
+   sg.Button(State.Tried, disabled=True),
+   sg.Button(State.Failed, disabled=True),
+   sg.Button(State.Unfetched, visible=False),
+   sg.Button(State.Missing, visible=False)],
 ]
 
 print(f"PySimpleGUI theme: '{sg.theme()}' (global: '{sg.theme_global()}')")
 #sg.theme('DarkBlue3')
 
 window = sg.Window('Demos in Steam wishlist', layout, resizable=True, finalize=True)
-window.set_min_size((640, 768))
+window.set_min_size((640, 800))
 window.refresh()
 window.move_to_center()
 #window.maximize()
@@ -129,7 +137,7 @@ def update_table():
   if num_filtered != num_sorted:
     num_items_str = f"{num_filtered} (of {num_sorted})"
   else:
-    num_items_str = f"{num_filtered}"
+    num_items_str = f"all {num_filtered}"
   window['TableTitle'].update(f"Listing {num_items_str} wishlist items:")
 
   colored_rows = []
@@ -504,7 +512,7 @@ while True:
   if event == 'FilterState' or event == 'FilterDemo' or event == 'FilterTitle':
     update_table()
 
-  if event == 'Reset':
+  if event == 'Reset all':
     window['FilterState'].update(NO_FILTER)
     window['FilterDemo'].update(NO_FILTER)
     window['FilterTitle'].update("")
@@ -516,7 +524,7 @@ while True:
     if len(selected_rows) == 0:
       window['Selection'].update("(None)")
       window['Refresh'].update(disabled=True)
-      window['Visit page'].update(disabled=True)
+      window['Visit store'].update(disabled=True)
       window['Install/Play demo'].update(disabled=True)
       for state in State: window[state.name].update(disabled=True)
     elif len(selected_rows) == 1:
@@ -525,13 +533,13 @@ while True:
       window['Selection'].update(app_name)
       demo_id = data_sorted_filtered[idx][Column.DemoID.value]
       window['Refresh'].update(disabled=False)
-      window['Visit page'].update(disabled=False)
+      window['Visit store'].update(disabled=False)
       window['Install/Play demo'].update(disabled=(not demo_id))
       for state in State: window[state.name].update(disabled=False)
     else: # Multi-selection
       window['Selection'].update("(Multiple)")
       window['Refresh'].update(disabled=False)
-      window['Visit page'].update(disabled=True)
+      window['Visit store'].update(disabled=True)
       window['Install/Play demo'].update(disabled=True)
       for state in State: window[state.name].update(disabled=False)
 
@@ -563,7 +571,7 @@ while True:
 
   if len(selected_rows) == 1:
     idx = selected_rows[0]
-    if event == 'Visit page':
+    if event == 'Visit store':
       web_visit_steam_store_page(idx)
     if event == 'Install/Play demo':
       local_install_or_play_demo(idx)
